@@ -6,7 +6,7 @@
   },
   "scripts": {
     "start": "src/server.js",
-    "dev": "concurrently --raw \"nodemon src/server.js\" \"live-server src\""
+    "dev": "concurrently --raw \"nodemon src/server.js\" \"live-server src\ --port 9999""
   },
   "devDependencies": {
     "@types/node": "^20.16.13",
