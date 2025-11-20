@@ -1,4 +1,4 @@
-import { MAP_TILES, MAP_NAMES } from './map.js';
+import { MAP_TILES, MAP_NAMES } from "./map.js";
 
 export const RIGHT = 3;
 export const DOWN = 1;
@@ -6,140 +6,151 @@ export const LEFT = 2;
 export const UP = 0;
 
 const DX = {
-  [RIGHT]: 1,
-  [LEFT]: -1,
-  [UP]: 0,
-  [DOWN]: 0
+    [RIGHT]: 1,
+    [LEFT]: -1,
+    [UP]: 0,
+    [DOWN]: 0,
 };
 
 const DY = {
-  [DOWN]: 1,
-  [UP]: -1,
-  [RIGHT]: 0,
-  [LEFT]: 0,
-}
+    [DOWN]: 1,
+    [UP]: -1,
+    [RIGHT]: 0,
+    [LEFT]: 0,
+};
 
 /**
- * @param {number} tile 
- * @param {boolean} isDog 
+ * @param {number} tile
+ * @param {boolean} isDog
  */
 export function isWall(tile, isDog) {
-  if (tile >= 180 && tile < 200) {
-    const actioncollide = tile - 179;
-    return true;
-  }
-  if (tile >= 11 && tile < 80) return true;
-  if (tile >= 134 && tile < 140) return true;
-  if (isDog && tile >= 127 && tile < 134) return true;
-  return false;
+    if (tile >= 180 && tile < 200) {
+        const actioncollide = tile - 179;
+        return true;
+    }
+
+    if (
+        !isDog &&
+        ((tile >= 177 && tile <= 179) || (tile >= 157 && tile <= 159))
+    )
+        return true;
+    if (tile >= 154 && tile <= 156) return true;
+    if (tile >= 11 && tile < 80) return true;
+    if (tile >= 134 && tile < 140) return true;
+    if (isDog && tile >= 127 && tile < 134) return true;
+    return false;
 }
 
 /**
- * @param {Player} me 
- * @param {number} nextX 
- * @param {number} nextY 
- * @param {Iterable<Player>} others 
+ * @param {Player} me
+ * @param {number} nextX
+ * @param {number} nextY
+ * @param {Iterable<Player>} others
  */
 function playerCollides(me, nextX, nextY, others) {
-  for (const o of others) {
-    if (o !== me && o.x === nextX && o.y === nextY) return o;
-  }
-  return null;
+    for (const o of others) {
+        if (o !== me && o.x === nextX && o.y === nextY) return o;
+    }
+    return null;
 }
 
 export class Player {
-  constructor(id=0, x=50, y=32) {
-    this.id = id;
-    this.x = x;
-    this.y = y;
-    this.color = this.id % 10;
-    this.facing = LEFT;
-    this.isNapping = false;
-    this.isDog = false;
-  }
-  toInt32() {
-    return (this.id << 24)
-         + (this.x << 16)
-         + (this.y << 8)
-         + (this.color << 4)
-         + (+this.isDog << 3)
-         + (+this.isNapping << 2)
-         + (this.facing << 0)
-  }
-  toDeletedInt32() {
-    return (this.id << 24);
-  }
-  copy() {
-    return deserializePlayer(this.toInt32());
-  }
-  /**
-   * @param {0|1|2|3} direction 
-   * @param {Iterable<Player>} otherPlayers 
-   * @param {boolean} faceOnly 
-   */
-  move(direction, otherPlayers, faceOnly) {
-    const nextX = this.x + DX[direction];
-    const nextY = this.y + DY[direction];
-    const tile = MAP_TILES[nextY][nextX];
-    const collidedWithWall = isWall(tile, this.isDog);
-    const target = collidedWithWall ? null : playerCollides(this, nextX, nextY, otherPlayers);
-    const collided = collidedWithWall || (target != null);
-    const moved = !collided && !faceOnly;
-    if (moved) {
-      this.x = nextX;
-      this.y = nextY;
+    constructor(id = 0, x = 50, y = 32) {
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.color = this.id % 10;
+        this.facing = LEFT;
+        this.isNapping = false;
+        this.isDog = false;
     }
-    const updated = moved || (this.facing !== direction) || this.isNapping;
-    this.facing = direction;
-    this.isNapping = false;
-    return { updated, moved, collided, target }
-  }
-  isAtDoorstep() {
-    const {x,y} = this;
-    return x >= 48 && y >= 30 && x <= 51 && y <= 31;
-  }
-  isAtDogAltar() {
-    const {x,y} = this;
-    return (x == 73 && y == 6) || (x == 74 && y == 6);
-  }
-  /**
-   * @param {string} str 
-   */
-  applyChatMessage(str) {
-    if (str === '/nap') {
-      this.isNapping = true;
-      return true
+    toInt32() {
+        return (
+            (this.id << 24) +
+            (this.x << 16) +
+            (this.y << 8) +
+            (this.color << 4) +
+            (+this.isDog << 3) +
+            (+this.isNapping << 2) +
+            (this.facing << 0)
+        );
     }
-    return false;
-  }
-  xroom() {
-    return Math.floor(this.x / 20)
-  }
-  yroom() {
-    return Math.floor(this.y / 12)
-  }
-  /**
-   * @param {Player} other 
-   */
-  sameRoomAs(other) {
-    return this.xroom() === other.xroom() && this.yroom() === other.yroom();
-  }
-  roomName() {
-    return MAP_NAMES[this.yroom()][this.xroom()]
-  }
+    toDeletedInt32() {
+        return this.id << 24;
+    }
+    copy() {
+        return deserializePlayer(this.toInt32());
+    }
+    /**
+     * @param {0|1|2|3} direction
+     * @param {Iterable<Player>} otherPlayers
+     * @param {boolean} faceOnly
+     */
+    move(direction, otherPlayers, faceOnly) {
+        const nextX = this.x + DX[direction];
+        const nextY = this.y + DY[direction];
+        const tile = MAP_TILES[nextY][nextX];
+        const collidedWithWall = isWall(tile, this.isDog);
+        const target = collidedWithWall
+            ? null
+            : playerCollides(this, nextX, nextY, otherPlayers);
+        const collided = collidedWithWall || target != null;
+        const moved = !collided && !faceOnly;
+        if (moved) {
+            this.x = nextX;
+            this.y = nextY;
+        }
+        const updated = moved || this.facing !== direction || this.isNapping;
+        this.facing = direction;
+        this.isNapping = false;
+        return { updated, moved, collided, target };
+    }
+    isAtDoorstep() {
+        const { x, y } = this;
+        return x >= 48 && y >= 30 && x <= 51 && y <= 31;
+    }
+    isAtDogAltar() {
+        const { x, y } = this;
+        return (x == 73 && y == 6) || (x == 74 && y == 6);
+    }
+    /**
+     * @param {string} str
+     */
+    applyChatMessage(str) {
+        if (str === "/nap") {
+            this.isNapping = true;
+            return true;
+        }
+        return false;
+    }
+    xroom() {
+        return Math.floor(this.x / 20);
+    }
+    yroom() {
+        return Math.floor(this.y / 12);
+    }
+    /**
+     * @param {Player} other
+     */
+    sameRoomAs(other) {
+        return this.xroom() === other.xroom() && this.yroom() === other.yroom();
+    }
+    roomName() {
+        return MAP_NAMES[this.yroom()][this.xroom()];
+    }
 }
 
 /**
- * @param {number} i32 
+ * @param {number} i32
  */
 export function deserializePlayer(i32) {
-  const id = (i32 >>> 24) & 0xFF;
-  const x = (i32 >>> 16) & 0xFF;
-  const y = (i32 >>> 8) & 0xFF;
-  const p = new Player(id, x, y);
-  p.color = (i32 >>> 4) & 0x0F;
-  p.isDog = !!((i32 >>> 3) & 0x01);
-  p.isNapping = !!((i32 >>> 2) & 0x01);
-  p.facing = (i32 >>> 0) & 0x03;
-  return p;
+    const id = (i32 >>> 24) & 0xff;
+    const x = (i32 >>> 16) & 0xff;
+    const y = (i32 >>> 8) & 0xff;
+    const p = new Player(id, x, y);
+    p.color = (i32 >>> 4) & 0x0f;
+    p.isDog = !!((i32 >>> 3) & 0x01);
+    p.isNapping = !!((i32 >>> 2) & 0x01);
+    p.facing = (i32 >>> 0) & 0x03;
+    return p;
 }
